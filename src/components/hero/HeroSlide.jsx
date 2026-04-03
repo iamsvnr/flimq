@@ -59,7 +59,7 @@ export default function HeroSlide({ item, direction }) {
         variants={heroContentVariants}
         initial="hidden"
         animate="visible"
-        className="absolute bottom-0 left-0 right-0 px-4 md:px-10 pb-28 md:pb-36"
+        className="absolute bottom-0 left-0 right-0 px-4 md:px-10 pb-28 landscape:pb-16 md:pb-36"
       >
         <div className="max-w-[1400px] mx-auto">
           <div className="max-w-xl">
@@ -76,7 +76,7 @@ export default function HeroSlide({ item, direction }) {
             {/* Title */}
             <motion.h1
               variants={heroItemVariants}
-              className="text-3xl md:text-5xl lg:text-6xl font-black font-heading text-white text-shadow leading-[1.05] mb-4"
+              className="text-3xl md:text-5xl lg:text-6xl landscape:text-2xl font-black font-heading text-white text-shadow leading-[1.05] mb-4 landscape:mb-2"
             >
               {title}
             </motion.h1>
@@ -84,7 +84,7 @@ export default function HeroSlide({ item, direction }) {
             {/* Description */}
             <motion.p
               variants={heroItemVariants}
-              className="text-sm md:text-[15px] text-white/55 mb-6 max-w-lg leading-relaxed"
+              className="text-sm md:text-[15px] text-white/55 mb-6 landscape:mb-3 max-w-lg leading-relaxed landscape:line-clamp-2"
             >
               {truncateText(item.overview, 160)}
             </motion.p>
