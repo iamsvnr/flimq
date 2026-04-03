@@ -1,18 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useFetch } from '@/hooks/useFetch';
+import { useAuth } from '@/context/AuthContext';
 import { ENDPOINTS } from '@/api/endpoints';
 import HeroSlide from './HeroSlide';
 import HeroControls from './HeroControls';
 import Loader from '../ui/Loader';
 
 export default function HeroSection() {
+  const { adultEnabled } = useAuth();
   const { data, loading } = useFetch(ENDPOINTS.TRENDING_ALL);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [isPaused, setIsPaused] = useState(false);
 
-  const slides = data?.results?.filter((item) => item.backdrop_path).slice(0, 6) || [];
+  const slides = data?.results?.filter((item) => item.backdrop_path && (adultEnabled || !item.adult)).slice(0, 6) || [];
 
   const goToSlide = useCallback((index) => {
     setDirection(index > currentIndex ? 1 : -1);

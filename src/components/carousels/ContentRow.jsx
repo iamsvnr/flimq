@@ -5,6 +5,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode } from 'swiper/modules';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
+import { useAuth } from '@/context/AuthContext';
 import { fadeInUp } from '@/utils/animations';
 import MovieCard from '../cards/MovieCard';
 import MovieCardSkeleton from '../cards/MovieCardSkeleton';
@@ -13,10 +14,13 @@ import 'swiper/css';
 import 'swiper/css/free-mode';
 
 export default function ContentRow({ title, items, loading, mediaType, link }) {
+  const { adultEnabled } = useAuth();
   const { ref, isVisible } = useIntersectionObserver();
   const swiperRef = useRef(null);
   const [isBeginning, setIsBeginning] = useState(true);
   const [isEnd, setIsEnd] = useState(false);
+
+  const filteredItems = !adultEnabled ? items?.filter((item) => !item.adult) : items;
 
   return (
     <motion.section
@@ -70,7 +74,7 @@ export default function ContentRow({ title, items, loading, mediaType, link }) {
                   <MovieCardSkeleton />
                 </SwiperSlide>
               ))
-            : items?.map((item) => (
+            : filteredItems?.map((item) => (
                 <SwiperSlide key={item.id}>
                   <MovieCard item={item} mediaType={mediaType} />
                 </SwiperSlide>

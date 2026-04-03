@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { IoMailOutline, IoClose } from 'react-icons/io5';
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import ScrollToTop from '../ui/ScrollToTop';
@@ -44,6 +45,7 @@ export default function Layout() {
   const { user } = useAuth();
   const location = useLocation();
   const showBanner = user && !user.emailVerified;
+  useKeyboardShortcuts();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -51,7 +53,7 @@ export default function Layout() {
       <div style={{ paddingTop: showBanner ? 36 : 0 }} className="transition-[padding] duration-300">
         <Navbar />
         <ScrollToTop />
-        <main className="flex-1">
+        <main className="flex-1 min-h-screen">
           <AnimatePresence mode="wait">
             <Outlet key={location.pathname} />
           </AnimatePresence>

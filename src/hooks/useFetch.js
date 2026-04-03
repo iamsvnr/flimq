@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import tmdb from '../api/tmdb';
 
 export function useFetch(endpoint, params = {}, deps = []) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Check cache synchronously to avoid loading flash
+  const cached = endpoint ? tmdb.getCached(endpoint, params) : null;
+  const [data, setData] = useState(cached);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -11,6 +13,9 @@ export function useFetch(endpoint, params = {}, deps = []) {
       setLoading(false);
       return;
     }
+    // If we already have cached data, skip fetching
+    if (data && cached) return;
+
     let cancelled = false;
     setLoading(true);
     setError(null);

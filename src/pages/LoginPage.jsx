@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { IoEye, IoEyeOff, IoMailOutline } from 'react-icons/io5';
+import { IoEye, IoEyeOff, IoMailOutline, IoArrowBack } from 'react-icons/io5';
 import { useAuth } from '@/context/AuthContext';
 import { pageVariants } from '@/utils/animations';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { login, user } = useAuth();
+  const { login, resetPassword, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetMsg, setResetMsg] = useState(null);
 
   // Redirect if already logged in
   if (user) return <Navigate to="/" replace />;
@@ -38,6 +41,24 @@ export default function LoginPage() {
         setNeedsVerification(true);
       }
       setError(result.error);
+    }
+    setSubmitting(false);
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setResetMsg({ type: 'error', text: 'Please enter your email address' });
+      return;
+    }
+    setSubmitting(true);
+    setResetMsg(null);
+    const result = await resetPassword(email.trim());
+    if (result.success) {
+      setResetSent(true);
+      setResetMsg({ type: 'success', text: 'Password reset link sent to your email' });
+    } else {
+      setResetMsg({ type: 'error', text: result.error });
     }
     setSubmitting(false);
   };
@@ -71,6 +92,73 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="bg-[#111111] border border-white/[0.06] rounded-lg p-8">
+          {forgotMode ? (
+            <>
+              <button
+                onClick={() => { setForgotMode(false); setResetMsg(null); setResetSent(false); }}
+                className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors mb-4"
+              >
+                <IoArrowBack size={14} />
+                Back to Sign In
+              </button>
+              <h1 className="text-2xl font-bold font-heading text-white mb-1">Forgot Password</h1>
+              <p className="text-sm text-white/35 mb-6">Enter your email to receive a reset link</p>
+
+              {resetSent ? (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-4"
+                >
+                  <div className="flex items-start gap-2.5 bg-emerald-500/[0.06] border border-emerald-500/15 rounded-md px-3 py-3">
+                    <IoMailOutline size={16} className="text-emerald-400/70 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium text-emerald-400/80">Reset link sent</p>
+                      <p className="text-[11px] text-emerald-400/50 mt-0.5">Check your inbox at {email} for the password reset link.</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setForgotMode(false); setResetSent(false); setResetMsg(null); }}
+                    className="w-full py-2.5 bg-white text-black text-sm font-bold rounded-md hover:bg-white/85 transition-all active:scale-[0.98]"
+                  >
+                    Back to Sign In
+                  </button>
+                </motion.div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1.5 font-medium">Email</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-md text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
+                    />
+                  </div>
+
+                  {resetMsg && resetMsg.type === 'error' && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-xs text-red-400/80 bg-red-400/[0.06] border border-red-400/10 rounded-md px-3 py-2"
+                    >
+                      {resetMsg.text}
+                    </motion.p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full py-2.5 bg-white text-black text-sm font-bold rounded-md hover:bg-white/85 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                  >
+                    {submitting ? 'Sending...' : 'Send Reset Link'}
+                  </button>
+                </form>
+              )}
+            </>
+          ) : (
+            <>
           <h1 className="text-2xl font-bold font-heading text-white mb-1">Sign In</h1>
           <p className="text-sm text-white/35 mb-6">Welcome back to FLIMQ</p>
 
@@ -89,7 +177,16 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-xs text-white/40 mb-1.5 font-medium">Password</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs text-white/40 font-medium">Password</label>
+                <button
+                  type="button"
+                  onClick={() => { setForgotMode(true); setError(''); setNeedsVerification(false); }}
+                  className="text-xs text-white/30 hover:text-white/60 transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -143,6 +240,8 @@ export default function LoginPage() {
               {submitting ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+            </>
+          )}
         </div>
 
         {/* Footer link */}

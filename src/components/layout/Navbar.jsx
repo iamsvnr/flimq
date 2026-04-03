@@ -20,7 +20,7 @@ export default function Navbar() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, adultEnabled, toggleAdult } = useAuth();
+  const { user, logout } = useAuth();
   const profileRef = useRef(null);
 
   useEffect(() => {
@@ -151,17 +151,6 @@ export default function Navbar() {
                           <IoPersonOutline size={15} />
                           Watchlist
                         </Link>
-                        {user.isAdult && (
-                          <button
-                            onClick={toggleAdult}
-                            className="flex items-center justify-between px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.04] transition-colors w-full"
-                          >
-                            <span>18+ Content</span>
-                            <div className={`w-8 h-[18px] rounded-full transition-colors relative ${adultEnabled ? 'bg-white/30' : 'bg-white/10'}`}>
-                              <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full transition-all ${adultEnabled ? 'left-[15px] bg-white' : 'left-[2px] bg-white/40'}`} />
-                            </div>
-                          </button>
-                        )}
                         <button
                           onClick={handleLogout}
                           className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.04] transition-colors w-full text-left"
@@ -198,8 +187,6 @@ export default function Navbar() {
         onClose={() => setShowMobileMenu(false)}
         links={navLinks.filter((link) => !link.authOnly || user)}
         user={user}
-        adultEnabled={adultEnabled}
-        toggleAdult={toggleAdult}
       />
     </>
   );

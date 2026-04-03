@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { IoShieldCheckmark, IoMailOutline, IoPersonOutline, IoCalendarOutline, IoCheckmarkCircle, IoCloseCircle, IoMale, IoFemale, IoMaleFemale } from 'react-icons/io5';
+import { IoShieldCheckmark, IoMailOutline, IoPersonOutline, IoCalendarOutline, IoCheckmarkCircle, IoCloseCircle, IoMale, IoFemale, IoMaleFemale, IoTrashOutline, IoWarning } from 'react-icons/io5';
 import { useAuth } from '@/context/AuthContext';
 import { pageVariants } from '@/utils/animations';
 
@@ -12,7 +12,8 @@ const GENDERS = [
 ];
 
 export default function ProfilePage() {
-  const { user, adultEnabled, toggleAdult, updateProfile, updateGender, resetPassword } = useAuth();
+  const { user, adultEnabled, toggleAdult, updateProfile, updateGender, resetPassword, deleteAccount } = useAuth();
+  const navigate = useNavigate();
 
   const [name, setName] = useState(user?.name || '');
   const [saving, setSaving] = useState(false);
@@ -24,6 +25,9 @@ export default function ProfilePage() {
 
   const [sendingReset, setSendingReset] = useState(false);
   const [resetMsg, setResetMsg] = useState(null);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   if (!user) return <Navigate to="/login" replace />;
 
@@ -58,6 +62,12 @@ export default function ProfilePage() {
       : { type: 'error', text: result.error }
     );
     setSavingGender(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    await deleteAccount();
+    navigate('/');
   };
 
   const genderLabel = user.gender === 'male' ? 'Male' : user.gender === 'female' ? 'Female' : 'Other';
@@ -135,9 +145,21 @@ export default function ProfilePage() {
                   <IoShieldCheckmark size={14} className="text-white/40" />
                   <span className="text-sm text-white/60">18+ Content</span>
                 </div>
-                <div className={`w-9 h-5 rounded-full transition-colors relative ${adultEnabled ? 'bg-white/30' : 'bg-white/10'}`}>
-                  <div className={`absolute top-[3px] w-[14px] h-[14px] rounded-full transition-all ${adultEnabled ? 'left-[17px] bg-white' : 'left-[3px] bg-white/40'}`} />
-                </div>
+                <motion.div
+                  className="w-9 h-5 rounded-full relative"
+                  animate={{ backgroundColor: adultEnabled ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)' }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <motion.div
+                    className="absolute top-[3px] w-[14px] h-[14px] rounded-full"
+                    animate={{
+                      left: adultEnabled ? 17 : 3,
+                      backgroundColor: adultEnabled ? '#ffffff' : 'rgba(255,255,255,0.4)',
+                      scale: [1, 1.2, 1],
+                    }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  />
+                </motion.div>
               </button>
             </div>
           )}
@@ -250,6 +272,53 @@ export default function ProfilePage() {
           >
             {sendingReset ? 'Sending...' : 'Send Reset Link'}
           </button>
+        </div>
+
+        {/* Delete Account */}
+        <div className="bg-[#111111] border border-red-500/10 rounded-lg p-5">
+          <h2 className="text-sm font-semibold text-red-400/60 uppercase tracking-wider flex items-center gap-2 mb-3">
+            <IoTrashOutline size={14} />
+            Danger Zone
+          </h2>
+          <p className="text-xs text-white/30 mb-4">
+            Permanently delete your account and all associated data. This action cannot be undone.
+          </p>
+          {!showDeleteConfirm ? (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="py-2.5 px-5 bg-red-500/10 text-red-400 text-sm font-bold rounded-md hover:bg-red-500/20 transition-all border border-red-500/20 active:scale-[0.98]"
+            >
+              Delete Account
+            </button>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-3"
+            >
+              <div className="flex items-start gap-2.5 bg-red-500/[0.06] border border-red-500/15 rounded-md px-3 py-2.5">
+                <IoWarning size={16} className="text-red-400/70 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-red-400/70">
+                  Are you sure? Your watchlist, preferences, and profile data will be permanently deleted.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                  className="py-2.5 px-5 bg-red-500 text-white text-sm font-bold rounded-md hover:bg-red-600 transition-all disabled:opacity-50 active:scale-[0.98]"
+                >
+                  {deleting ? 'Deleting...' : 'Yes, Delete'}
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="py-2.5 px-5 bg-white/[0.04] text-white/60 text-sm font-medium rounded-md hover:bg-white/[0.08] transition-all border border-white/[0.08]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
     </motion.div>

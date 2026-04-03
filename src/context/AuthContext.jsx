@@ -65,16 +65,36 @@ export function AuthProvider({ children }) {
   const [adultEnabled, setAdultEnabled] = useState(false);
 
   const fetchProfile = async (userId) => {
-    const { data } = await supabase
-      .from('user_profiles')
-      .select('gender, dob')
-      .eq('user_id', userId)
-      .single();
-    return data || null;
+    try {
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('gender, dob')
+        .eq('user_id', userId)
+        .maybeSingle();
+      return data || null;
+    } catch {
+      return null;
+    }
   };
 
   const initUser = async (supabaseUser) => {
-    const profile = await fetchProfile(supabaseUser.id);
+    let profile = null;
+    try {
+      profile = await fetchProfile(supabaseUser.id);
+    } catch {}
+    // If no profile row exists, create it from signup metadata
+    if (!profile) {
+      const meta = supabaseUser.user_metadata || {};
+      if (meta.gender || meta.dob) {
+        try {
+          await supabase.from('user_profiles').upsert(
+            { user_id: supabaseUser.id, gender: meta.gender || 'male', dob: meta.dob || '2000-01-01' },
+            { onConflict: 'user_id' }
+          );
+          profile = { gender: meta.gender || 'male', dob: meta.dob || '2000-01-01' };
+        } catch {}
+      }
+    }
     const built = buildUser(supabaseUser, profile);
     setUser(built);
     if (!built.isAdult) setAdultEnabled(false);
@@ -83,36 +103,49 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let initialized = false;
+    let currentUserId = null;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setAdultEnabled(false);
-        if (!initialized) {
-          initialized = true;
-          setLoading(false);
-        }
-      } else if (session?.user) {
-        await initUser(session.user);
-        fetchPreferences(session.user.id);
-        if (!initialized) {
-          initialized = true;
-          setLoading(false);
-        }
-      } else if (event === 'INITIAL_SESSION') {
-        // No session on initial load = not logged in
-        initialized = true;
-        setLoading(false);
-      }
-    });
-
-    // Fallback: if onAuthStateChange never fires, stop loading after timeout
-    const timeout = setTimeout(() => {
+    const setReady = () => {
       if (!initialized) {
         initialized = true;
         setLoading(false);
       }
-    }, 3000);
+    };
+
+    const restore = async (supabaseUser) => {
+      if (!supabaseUser) {
+        setReady();
+        return;
+      }
+      // Skip if same user already restored
+      if (currentUserId === supabaseUser.id && initialized) return;
+      currentUserId = supabaseUser.id;
+      try {
+        await initUser(supabaseUser);
+        fetchPreferences(supabaseUser.id);
+      } catch {}
+      setReady();
+    };
+
+    // 1. Restore session from localStorage
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      restore(session?.user || null);
+    }).catch(() => setReady());
+
+    // 2. Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        currentUserId = null;
+        setUser(null);
+        setAdultEnabled(false);
+        setReady();
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        restore(session?.user || null);
+      }
+    });
+
+    // 3. Fallback timeout
+    const timeout = setTimeout(() => setReady(), 3000);
 
     return () => {
       subscription.unsubscribe();
@@ -121,14 +154,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   const fetchPreferences = async (userId) => {
-    const { data } = await supabase
-      .from('user_preferences')
-      .select('adult_enabled')
-      .eq('user_id', userId)
-      .single();
-    if (data) {
-      setAdultEnabled(data.adult_enabled || false);
-    }
+    try {
+      const { data } = await supabase
+        .from('user_preferences')
+        .select('adult_enabled')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (data) {
+        setAdultEnabled(data.adult_enabled || false);
+      }
+    } catch {}
   };
 
   const login = async (email, password) => {
@@ -151,7 +186,7 @@ export function AuthProvider({ children }) {
       email,
       password,
       options: {
-        data: { name, avatar_url: avatarUrl },
+        data: { name, avatar_url: avatarUrl, gender, dob },
       },
     });
     if (error) {
@@ -162,13 +197,6 @@ export function AuthProvider({ children }) {
     }
     if (data?.user && data.user.identities?.length === 0) {
       return { success: false, error: 'Email already registered' };
-    }
-    // Store gender & DOB in user_profiles table
-    if (data?.user) {
-      await supabase.from('user_profiles').upsert(
-        { user_id: data.user.id, gender, dob },
-        { onConflict: 'user_id' }
-      );
     }
     if (data?.user && !data.session) {
       return { success: true, needsConfirmation: true };
@@ -195,7 +223,12 @@ export function AuthProvider({ children }) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/profile`,
     });
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      const msg = error.message?.toLowerCase().includes('rate limit')
+        ? 'Too many requests. Please wait a few minutes before trying again.'
+        : error.message;
+      return { success: false, error: msg };
+    }
     return { success: true };
   };
 
@@ -212,24 +245,60 @@ export function AuthProvider({ children }) {
   };
 
   const updateGender = async (gender) => {
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({ gender })
-      .eq('user_id', user.id);
-    if (error) return { success: false, error: error.message };
+    try {
+      // Try update first (works if row exists)
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .update({ gender })
+        .eq('user_id', user.id)
+        .select();
+
+      if (error) return { success: false, error: error.message };
+
+      // If no row was updated, insert a new one
+      if (!data || data.length === 0) {
+        const { error: insertErr } = await supabase
+          .from('user_profiles')
+          .insert({
+            user_id: user.id,
+            gender,
+            dob: user.dob || '2000-01-01',
+          });
+        if (insertErr) return { success: false, error: insertErr.message };
+      }
+    } catch {
+      // Table might not exist — update locally anyway
+    }
     // Regenerate avatar with new gender
     const newAvatarUrl = generateAvatarUrl(user.email || user.id, gender);
-    await supabase.auth.updateUser({ data: { avatar_url: newAvatarUrl } });
-    const { data: { user: freshUser } } = await supabase.auth.getUser();
-    if (freshUser) {
-      const profile = await fetchProfile(freshUser.id);
-      setUser(buildUser(freshUser, profile));
+    try {
+      await supabase.auth.updateUser({ data: { avatar_url: newAvatarUrl } });
+    } catch {}
+    // Rebuild user state locally regardless of DB success
+    setUser((prev) => prev ? {
+      ...prev,
+      gender,
+      avatarUrl: newAvatarUrl,
+    } : prev);
+    return { success: true };
+  };
+
+  const deleteAccount = async () => {
+    if (!user) return { success: false, error: 'Not logged in' };
+    try {
+      const { error } = await supabase.rpc('delete_user');
+      if (error) return { success: false, error: error.message };
+    } catch (e) {
+      return { success: false, error: e.message };
     }
+    await supabase.auth.signOut();
+    setUser(null);
+    setAdultEnabled(false);
     return { success: true };
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, adultEnabled, toggleAdult, resetPassword, updateProfile, updateGender }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, adultEnabled, toggleAdult, resetPassword, updateProfile, updateGender, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { IoClose } from 'react-icons/io5';
 import { mobileMenuVariants, overlayVariants } from '@/utils/animations';
 
-export default function MobileMenu({ isOpen, onClose, links, user, adultEnabled, toggleAdult }) {
+export default function MobileMenu({ isOpen, onClose, links, user }) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -58,21 +58,8 @@ export default function MobileMenu({ isOpen, onClose, links, user, adultEnabled,
                 </motion.div>
               ))}
             </nav>
-            {user && user.isAdult && (
-              <div className="mt-8 pt-6 border-t border-white/[0.06]">
-                <button
-                  onClick={toggleAdult}
-                  className="flex items-center justify-between w-full py-2 px-3 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
-                >
-                  <span className="text-lg font-medium">18+ Content</span>
-                  <div className={`w-10 h-[22px] rounded-full transition-colors relative ${adultEnabled ? 'bg-white/30' : 'bg-white/10'}`}>
-                    <div className={`absolute top-[3px] w-[16px] h-[16px] rounded-full transition-all ${adultEnabled ? 'left-[21px] bg-white' : 'left-[3px] bg-white/40'}`} />
-                  </div>
-                </button>
-              </div>
-            )}
             {user && (
-              <div className={`${user.isAdult ? 'mt-4' : 'mt-8'} pt-4 border-t border-white/[0.06]`}>
+              <div className="mt-8 pt-4 border-t border-white/[0.06]">
                 <Link
                   to="/profile"
                   onClick={onClose}

@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { IoFilter } from 'react-icons/io5';
+import { IoFilter, IoFilm } from 'react-icons/io5';
 import tmdb from '@/api/tmdb';
 import { ENDPOINTS } from '@/api/endpoints';
 import { pageVariants, staggerContainer, fadeInUp } from '@/utils/animations';
 import { useAuth } from '@/context/AuthContext';
 import MovieCard from '@/components/cards/MovieCard';
 import MovieCardSkeleton from '@/components/cards/MovieCardSkeleton';
-import Button from '@/components/ui/Button';
+import SEO from '@/components/ui/SEO';
 
 const SORT_OPTIONS = [
   { value: 'popularity.desc', label: 'Most Popular' },
@@ -26,6 +26,7 @@ export default function MoviesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const loaderRef = useRef(null);
 
   useEffect(() => {
     tmdb.get(ENDPOINTS.MOVIE_GENRES).then((res) => setGenres(res.genres || []));
@@ -44,7 +45,10 @@ export default function MoviesPage() {
 
     tmdb.get(ENDPOINTS.DISCOVER_MOVIE, { params })
       .then((res) => {
-        setMovies((prev) => reset ? res.results : [...prev, ...res.results]);
+        setMovies((prev) => {
+          const results = adultEnabled ? res.results : res.results.filter((m) => !m.adult);
+          return reset ? results : [...prev, ...results];
+        });
         setTotalPages(res.total_pages);
       })
       .catch(console.error)
@@ -56,14 +60,29 @@ export default function MoviesPage() {
     fetchMovies(1, true);
   }, [fetchMovies]);
 
-  const loadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchMovies(nextPage);
-  };
+  // Infinite scroll
+  useEffect(() => {
+    if (loading || loadingMore) return;
+    const el = loaderRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && page < totalPages && !loadingMore) {
+          const nextPage = page + 1;
+          setPage(nextPage);
+          fetchMovies(nextPage);
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading, loadingMore, page, totalPages, fetchMovies]);
 
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="pt-24 pb-16 px-4 md:px-8 max-w-7xl mx-auto">
+      <SEO title="Movies" description="Browse and discover movies on FLIMQ" />
       <h1 className="text-3xl md:text-4xl font-extrabold font-heading text-white mb-6">Movies</h1>
 
       {/* Filters */}
@@ -72,20 +91,38 @@ export default function MoviesPage() {
           <IoFilter size={18} />
           <span className="text-sm">Filter:</span>
         </div>
-        <select
-          value={selectedGenre}
-          onChange={(e) => setSelectedGenre(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-black text-sm text-white border border-white/10 focus:outline-none focus:border-white/30 cursor-pointer"
-        >
-          <option value="">All Genres</option>
+
+        {/* Genre Chips */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedGenre('')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              !selectedGenre
+                ? 'bg-white text-black'
+                : 'bg-white/[0.05] text-white/50 hover:bg-white/[0.1] hover:text-white/80 border border-white/[0.06]'
+            }`}
+          >
+            All
+          </button>
           {genres.map((g) => (
-            <option key={g.id} value={g.id}>{g.name}</option>
+            <button
+              key={g.id}
+              onClick={() => setSelectedGenre(String(g.id) === selectedGenre ? '' : String(g.id))}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                String(g.id) === selectedGenre
+                  ? 'bg-white text-black'
+                  : 'bg-white/[0.05] text-white/50 hover:bg-white/[0.1] hover:text-white/80 border border-white/[0.06]'
+              }`}
+            >
+              {g.name}
+            </button>
           ))}
-        </select>
+        </div>
+
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-black text-sm text-white border border-white/10 focus:outline-none focus:border-white/30 cursor-pointer"
+          className="px-3 py-2 rounded-lg bg-black text-sm text-white border border-white/10 focus:outline-none focus:border-white/30 cursor-pointer ml-auto"
         >
           {SORT_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -100,7 +137,7 @@ export default function MoviesPage() {
             <MovieCardSkeleton key={i} />
           ))}
         </div>
-      ) : (
+      ) : movies.length > 0 ? (
         <>
           <motion.div
             variants={staggerContainer}
@@ -115,14 +152,24 @@ export default function MoviesPage() {
             ))}
           </motion.div>
 
+          {/* Infinite scroll trigger */}
           {page < totalPages && (
-            <div className="flex justify-center mt-10">
-              <Button variant="secondary" size="lg" onClick={loadMore} disabled={loadingMore}>
-                {loadingMore ? 'Loading...' : 'Load More'}
-              </Button>
+            <div ref={loaderRef} className="flex justify-center mt-10 py-8">
+              {loadingMore && (
+                <div className="flex items-center gap-2 text-white/30 text-sm">
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+                  Loading more...
+                </div>
+              )}
             </div>
           )}
         </>
+      ) : (
+        <div className="text-center py-20">
+          <IoFilm className="mx-auto mb-4 text-white/10" size={64} />
+          <h3 className="text-xl font-semibold text-white/50 mb-2">No movies found</h3>
+          <p className="text-white/30">Try a different genre or sort option</p>
+        </div>
       )}
     </motion.div>
   );

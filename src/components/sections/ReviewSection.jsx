@@ -77,7 +77,9 @@ function ExpandCollapse({ expanded, children }) {
 
   useEffect(() => {
     if (!ref.current) return;
-    const measure = () => setMeasuredHeight(ref.current.scrollHeight);
+    const measure = () => {
+      if (ref.current) setMeasuredHeight(ref.current.scrollHeight);
+    };
     measure();
     // Re-measure if content changes (e.g. images load)
     const observer = new ResizeObserver(measure);

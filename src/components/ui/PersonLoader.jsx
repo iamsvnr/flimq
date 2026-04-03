@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 
 export default function PersonLoader() {
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-[50vh] bg-[#0a0a0a] overflow-hidden">
+    <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#0a0a0a] overflow-hidden">
 
       {/* Ambient spotlight */}
       <motion.div

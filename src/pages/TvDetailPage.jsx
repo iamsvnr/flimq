@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IoPlay, IoAdd, IoCheckmark, IoCalendar, IoTv, IoChevronDown, IoFilm } from 'react-icons/io5';
+import { IoPlay, IoAdd, IoCheckmark, IoCalendar, IoTv, IoChevronDown, IoFilm, IoEye, IoEyeOutline } from 'react-icons/io5';
 import tmdb from '@/api/tmdb';
 import { ENDPOINTS, getBackdropUrl, getPosterUrl, getTvCertification } from '@/api/endpoints';
 import { formatDate } from '@/utils/helpers';
@@ -18,11 +18,18 @@ import CastCarousel from '@/components/carousels/CastCarousel';
 import ContentRow from '@/components/carousels/ContentRow';
 import ReviewSection from '@/components/sections/ReviewSection';
 import WatchProviders from '@/components/sections/WatchProviders';
+import ShareButtons from '@/components/ui/ShareButtons';
+import SEO from '@/components/ui/SEO';
+import UserRatingComponent from '@/components/ui/UserRating';
+import { useUserRating } from '@/hooks/useUserRating';
+import { useWatchedStatus } from '@/hooks/useWatchedStatus';
 
 export default function TvDetailPage() {
   const { id } = useParams();
   const { addToList, removeFromList, isInList } = useMyList();
   const { user } = useAuth();
+  const { rating: userRating, setUserRating } = useUserRating(Number(id), 'tv');
+  const { watched, toggleWatched } = useWatchedStatus(Number(id), 'tv');
   const [show, setShow] = useState(null);
   const [credits, setCredits] = useState(null);
   const [videos, setVideos] = useState(null);
@@ -86,6 +93,11 @@ export default function TvDetailPage() {
 
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="bg-[#0a0a0a]">
+      <SEO
+        title={show.name}
+        description={show.overview}
+        image={getBackdropUrl(show.backdrop_path)}
+      />
       {/* Backdrop */}
       <div className="detail-backdrop relative h-[70vh] md:h-[80vh]">
         <div
@@ -187,7 +199,29 @@ export default function TvDetailPage() {
                   {inList ? 'In Watchlist' : 'Add to Watchlist'}
                 </Button>
               )}
+              {user && (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={toggleWatched}
+                >
+                  {watched ? <IoEye size={20} /> : <IoEyeOutline size={20} />}
+                  {watched ? 'Watched' : 'Mark Watched'}
+                </Button>
+              )}
+              <ShareButtons title={show.name} mediaType="tv" />
             </div>
+
+            {/* User Rating */}
+            {user && (
+              <div className="flex items-center gap-3 pt-1">
+                <span className="text-xs text-white/30">Rate this:</span>
+                <UserRatingComponent
+                  rating={userRating}
+                  onRate={(val) => val ? setUserRating(val) : setUserRating(null)}
+                />
+              </div>
+            )}
           </motion.div>
         </div>
 

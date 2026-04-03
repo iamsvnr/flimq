@@ -31,12 +31,13 @@ export default function SearchPage() {
     setLoading(true);
     setSearchParams({ q: debouncedQuery });
     tmdb.get(ENDPOINTS.SEARCH_MULTI, { params: { query: debouncedQuery, include_adult: adultEnabled } })
-      .then((res) => setResults(res.results?.filter((r) => r.media_type !== 'person') || []))
+      .then((res) => setResults(res.results?.filter((r) => r.media_type !== 'person' && (adultEnabled || !r.adult)) || []))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [debouncedQuery, adultEnabled]);
 
   const filtered = results.filter((item) => {
+    if (!adultEnabled && item.adult) return false;
     if (activeTab === 'Movies') return getMediaType(item) === 'movie';
     if (activeTab === 'TV Shows') return getMediaType(item) === 'tv';
     return true;

@@ -9,9 +9,10 @@ import PopularSection from '@/components/sections/PopularSection';
 import TopRatedSection from '@/components/sections/TopRatedSection';
 import UpcomingSection from '@/components/sections/UpcomingSection';
 import GenresSection from '@/components/sections/GenresSection';
-import HomeLoader from '@/components/ui/HomeLoader';
+import RecommendedSection from '@/components/sections/RecommendedSection';
+import HomeLoader from '@/components/ui/HomeLoaderM';
 
-const MIN_LOADER_MS = 4000;
+const MIN_LOADER_MS = 5000;
 
 export default function HomePage() {
   const [ready, setReady] = useState(false);
@@ -42,6 +43,7 @@ export default function HomePage() {
           key="loader"
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6 }}
+          className="fixed inset-0 z-[70] bg-[#0a0a0a]"
         >
           <HomeLoader />
         </motion.div>
@@ -57,6 +59,7 @@ export default function HomePage() {
           <HeroSection />
           <div className="relative z-10 -mt-20 space-y-8 pb-16">
             <TrendingSection />
+            <RecommendedSection />
             <PopularSection />
             <TopRatedSection />
             <UpcomingSection />
