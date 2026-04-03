@@ -19,6 +19,7 @@ export default function PersonDetailPage() {
   const [images, setImages] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showFullBio, setShowFullBio] = useState(false);
+  const [activePhoto, setActivePhoto] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -94,7 +95,8 @@ export default function PersonDetailPage() {
           >
             <div className="relative">
               <LazyImage
-                src={getProfileUrl(person.profile_path)}
+                key={activePhoto || person.profile_path}
+                src={getImageUrl(activePhoto || person.profile_path, 'w500')}
                 alt={person.name}
                 className="w-48 h-48 md:w-64 md:h-64 rounded-2xl shadow-2xl ring-2 ring-white/10 object-cover"
               />
@@ -104,14 +106,19 @@ export default function PersonDetailPage() {
 
             {/* Photo gallery */}
             {photoGallery.length > 1 && (
-              <div className="flex gap-2 flex-wrap justify-center md:justify-start">
-                {photoGallery.slice(1, 5).map((img, i) => (
+              <div className="flex gap-2 flex-wrap justify-center md:justify-start mt-2">
+                {photoGallery.slice(0, 5).map((img, i) => (
                   <motion.div
                     key={i}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.4 + i * 0.1 }}
-                    className="w-14 h-14 rounded-lg overflow-hidden ring-1 ring-white/10 hover:ring-accent-500/50 transition-all cursor-pointer"
+                    onClick={() => setActivePhoto(img.file_path)}
+                    className={`w-14 h-14 rounded-lg overflow-hidden ring-1 transition-all cursor-pointer ${
+                      (activePhoto || person.profile_path) === img.file_path
+                        ? 'ring-white/50'
+                        : 'ring-white/10 hover:ring-white/30'
+                    }`}
                   >
                     <LazyImage
                       src={getImageUrl(img.file_path, 'w185')}
