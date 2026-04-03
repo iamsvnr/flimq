@@ -11,10 +11,14 @@ import UpcomingSection from '@/components/sections/UpcomingSection';
 import GenresSection from '@/components/sections/GenresSection';
 import HomeLoader from '@/components/ui/HomeLoader';
 
+const MIN_LOADER_MS = 4000;
+
 export default function HomePage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    const start = Date.now();
+
     // Preload ALL homepage data before showing the page
     Promise.all([
       tmdb.get(ENDPOINTS.TRENDING_ALL),
@@ -24,7 +28,11 @@ export default function HomePage() {
       tmdb.get(ENDPOINTS.UPCOMING_MOVIES),
     ])
       .catch(() => {})
-      .finally(() => setReady(true));
+      .finally(() => {
+        const elapsed = Date.now() - start;
+        const remaining = Math.max(0, MIN_LOADER_MS - elapsed);
+        setTimeout(() => setReady(true), remaining);
+      });
   }, []);
 
   return (
