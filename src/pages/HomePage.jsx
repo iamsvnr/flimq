@@ -9,17 +9,19 @@ import PopularSection from '@/components/sections/PopularSection';
 import TopRatedSection from '@/components/sections/TopRatedSection';
 import UpcomingSection from '@/components/sections/UpcomingSection';
 import GenresSection from '@/components/sections/GenresSection';
-import MovieLoader from '@/components/ui/MovieLoader';
+import HomeLoader from '@/components/ui/HomeLoader';
 
 export default function HomePage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Preload critical data before showing the page
+    // Preload ALL homepage data before showing the page
     Promise.all([
       tmdb.get(ENDPOINTS.TRENDING_ALL),
       tmdb.get(ENDPOINTS.TRENDING_MOVIES),
       tmdb.get(ENDPOINTS.POPULAR_MOVIES),
+      tmdb.get(ENDPOINTS.TOP_RATED_MOVIES),
+      tmdb.get(ENDPOINTS.UPCOMING_MOVIES),
     ])
       .catch(() => {})
       .finally(() => setReady(true));
@@ -31,9 +33,9 @@ export default function HomePage() {
         <motion.div
           key="loader"
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.6 }}
         >
-          <MovieLoader />
+          <HomeLoader />
         </motion.div>
       ) : (
         <motion.div
