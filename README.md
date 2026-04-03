@@ -84,6 +84,8 @@ In Netlify, go to **Site settings → Environment variables** and add:
 | `VITE_TMDB_IMAGE_BASE` | `https://image.tmdb.org/t/p` |
 | `VITE_SUPABASE_URL` | Your Supabase project URL (e.g. `https://xxxx.supabase.co`) |
 | `VITE_SUPABASE_ANON_KEY` | Your Supabase anon/public key |
+| `SUPABASE_URL` | Same as `VITE_SUPABASE_URL` (used by serverless functions) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase service role key (**Settings → API → service_role**) |
 
 ### Build Settings
 

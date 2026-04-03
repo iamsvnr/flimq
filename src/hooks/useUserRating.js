@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/supabase';
 import { useAuth } from '@/context/AuthContext';
 
+async function getAccessToken() {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || '';
+}
+
 export function useUserRating(tmdbId, mediaType) {
   const { user } = useAuth();
   const [rating, setRating] = useState(null);
@@ -10,32 +15,23 @@ export function useUserRating(tmdbId, mediaType) {
 
   const fetchAllRatings = useCallback(async () => {
     if (!tmdbId) return;
-    const { data } = await supabase
-      .from('user_ratings')
-      .select('*')
-      .eq('tmdb_id', tmdbId)
-      .eq('media_type', mediaType);
-    let ratings = data || [];
-    if (user) {
-      const userName = user.name || user.email?.split('@')[0] || 'User';
-      const userAvatar = user.avatarUrl || '';
-      ratings = ratings.map((r) =>
-        r.user_id === user.id
-          ? { ...r, author_name: r.author_name || userName, avatar_url: r.avatar_url || userAvatar }
-          : r
-      );
-      const mine = ratings.find((r) => r.user_id === user.id);
-      if (mine) setRating(mine.rating);
-    }
-    setAllRatings(ratings);
+    try {
+      const res = await fetch(`/.netlify/functions/ratings?tmdb_id=${tmdbId}&media_type=${mediaType}`);
+      const data = await res.json();
+      let ratings = Array.isArray(data) ? data : [];
+      if (user) {
+        const mine = ratings.find((r) => r.user_id === user.id);
+        if (mine) setRating(mine.rating);
+      }
+      setAllRatings(ratings);
+    } catch {}
   }, [user, tmdbId, mediaType]);
 
-  // Initial fetch
   useEffect(() => {
     fetchAllRatings();
   }, [fetchAllRatings]);
 
-  // Real-time subscription
+  // Real-time subscription (read-only, safe on client)
   useEffect(() => {
     if (!tmdbId) return;
     const channel = supabase
@@ -71,25 +67,16 @@ export function useUserRating(tmdbId, mediaType) {
     setRating(newRating);
     setLoading(true);
     try {
-      const authorName = user.name || user.email?.split('@')[0] || 'User';
-      const avatarUrl = user.avatarUrl || '';
-      const { error } = await supabase.from('user_ratings').upsert(
-        {
-          user_id: user.id,
-          tmdb_id: tmdbId,
-          media_type: mediaType,
-          rating: newRating,
-          author_name: authorName,
-          avatar_url: avatarUrl,
-        },
-        { onConflict: 'user_id,tmdb_id,media_type' }
-      );
-      if (error) setRating(prev);
-      else {
-        setAllRatings((prev) => {
-          const filtered = prev.filter((r) => r.user_id !== user.id);
-          return [...filtered, { user_id: user.id, tmdb_id: tmdbId, media_type: mediaType, rating: newRating, author_name: authorName, avatar_url: avatarUrl }];
-        });
+      const token = await getAccessToken();
+      const res = await fetch('/.netlify/functions/ratings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tmdb_id: tmdbId, media_type: mediaType, rating: newRating }),
+      });
+      if (!res.ok) {
+        setRating(prev);
+      } else {
+        fetchAllRatings();
       }
     } catch {
       setRating(prev);
@@ -102,12 +89,12 @@ export function useUserRating(tmdbId, mediaType) {
     setRating(null);
     setAllRatings((prev) => prev.filter((r) => r.user_id !== user.id));
     try {
-      await supabase
-        .from('user_ratings')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('tmdb_id', tmdbId)
-        .eq('media_type', mediaType);
+      const token = await getAccessToken();
+      await fetch('/.netlify/functions/ratings', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tmdb_id: tmdbId, media_type: mediaType }),
+      });
     } catch {}
   };
 
