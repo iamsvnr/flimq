@@ -35,12 +35,12 @@ export default function HeroSection() {
     return () => clearInterval(interval);
   }, [isPaused, nextSlide, slides.length]);
 
-  if (loading) return <div className="h-[65vh] landscape:h-[80vh] md:h-[90vh] min-h-[400px]"><Loader /></div>;
+  if (loading) return <div className="hero-section h-[65vh] md:h-[90vh]"><Loader /></div>;
   if (slides.length === 0) return null;
 
   return (
     <div
-      className="relative h-[65vh] landscape:h-[80vh] md:h-[90vh] min-h-[400px] w-full overflow-hidden"
+      className="hero-section relative h-[65vh] md:h-[90vh] w-full overflow-hidden"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >

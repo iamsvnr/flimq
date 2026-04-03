@@ -61,7 +61,7 @@ export default function MovieDetailPage() {
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="bg-[#0a0a0a]">
       {/* Backdrop */}
-      <div className="relative h-[70vh] landscape:h-[90vh] md:h-[80vh] min-h-[350px]">
+      <div className="detail-backdrop relative h-[70vh] md:h-[80vh]">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${getBackdropUrl(movie.backdrop_path)})` }}

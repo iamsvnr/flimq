@@ -19,7 +19,7 @@ export default function HeroControls({ total, current, onPrev, onNext, onDotClic
       </button>
 
       {/* Progress bar indicators - Hotstar/Prime style */}
-      <div className="absolute bottom-[72px] landscape:bottom-8 md:bottom-[88px] right-4 md:right-10 z-10 flex items-center gap-1">
+      <div className="hero-indicators absolute bottom-[72px] md:bottom-[88px] right-4 md:right-10 z-10 flex items-center gap-1">
         {Array.from({ length: total }).map((_, index) => (
           <button
             key={index}
