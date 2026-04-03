@@ -82,25 +82,42 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        await initUser(session.user);
-        fetchPreferences(session.user.id);
-      }
-      setLoading(false);
-    });
+    let initialized = false;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setAdultEnabled(false);
+        if (!initialized) {
+          initialized = true;
+          setLoading(false);
+        }
       } else if (session?.user) {
         await initUser(session.user);
         fetchPreferences(session.user.id);
+        if (!initialized) {
+          initialized = true;
+          setLoading(false);
+        }
+      } else if (event === 'INITIAL_SESSION') {
+        // No session on initial load = not logged in
+        initialized = true;
+        setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Fallback: if onAuthStateChange never fires, stop loading after timeout
+    const timeout = setTimeout(() => {
+      if (!initialized) {
+        initialized = true;
+        setLoading(false);
+      }
+    }, 3000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const fetchPreferences = async (userId) => {
