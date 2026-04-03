@@ -1,11 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+function getSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars');
+  return createClient(url, key);
+}
 
-async function getUser(token) {
+async function getUser(supabase, token) {
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user) return null;
   return user;
@@ -29,6 +31,8 @@ export async function handler(event) {
   }
 
   try {
+    const supabase = getSupabase();
+
     // GET - fetch all ratings for a media item (public, no auth needed)
     if (event.httpMethod === 'GET') {
       const { tmdb_id, media_type } = event.queryStringParameters || {};
@@ -46,7 +50,7 @@ export async function handler(event) {
 
     // POST - upsert a rating (auth required)
     if (event.httpMethod === 'POST') {
-      const user = await getUser(getToken(event.headers));
+      const user = await getUser(supabase, getToken(event.headers));
       if (!user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
 
       const { tmdb_id, media_type, rating } = JSON.parse(event.body);
@@ -74,7 +78,7 @@ export async function handler(event) {
 
     // DELETE - remove a rating (auth required)
     if (event.httpMethod === 'DELETE') {
-      const user = await getUser(getToken(event.headers));
+      const user = await getUser(supabase, getToken(event.headers));
       if (!user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
 
       const { tmdb_id, media_type } = JSON.parse(event.body);

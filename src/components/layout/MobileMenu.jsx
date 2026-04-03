@@ -69,6 +69,24 @@ export default function MobileMenu({ isOpen, onClose, links, user }) {
                 </Link>
               </div>
             )}
+            {!user && (
+              <div className="mt-8 pt-4 border-t border-white/[0.06] flex flex-col gap-2">
+                <Link
+                  to="/login"
+                  onClick={onClose}
+                  className="block text-lg font-medium py-2 px-3 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/signup"
+                  onClick={onClose}
+                  className="block text-lg font-medium py-2 px-3 rounded-lg text-white bg-white/[0.08] hover:bg-white/[0.12] transition-colors text-center"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
           </motion.div>
         </>
       )}
