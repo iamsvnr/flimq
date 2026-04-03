@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IoSearch, IoMenu, IoLogOutOutline, IoPersonOutline } from 'react-icons/io5';
+import { IoSearch, IoMenu, IoLogOutOutline, IoPersonOutline, IoSettingsOutline } from 'react-icons/io5';
 import { useAuth } from '@/context/AuthContext';
 import SearchBar from './SearchBar';
 import MobileMenu from './MobileMenu';
@@ -20,7 +20,7 @@ export default function Navbar() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, adultEnabled, toggleAdult } = useAuth();
   const profileRef = useRef(null);
 
   useEffect(() => {
@@ -100,9 +100,18 @@ export default function Navbar() {
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="w-8 h-8 rounded bg-white/10 flex items-center justify-center text-sm font-bold text-white/70 hover:bg-white/15 transition-all border border-white/[0.06]"
+                  className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/10 hover:ring-white/30 transition-all"
                 >
-                  {user.avatar}
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.parentElement.classList.add('bg-white/10', 'flex', 'items-center', 'justify-center');
+                      e.target.parentElement.innerHTML = `<span class="text-sm font-bold text-white/70">${user.avatar}</span>`;
+                    }}
+                  />
                 </button>
 
                 <AnimatePresence>
@@ -114,11 +123,26 @@ export default function Navbar() {
                       transition={{ duration: 0.15 }}
                       className="absolute right-0 top-full mt-2 w-52 bg-[#141414] border border-white/[0.08] rounded-lg shadow-2xl overflow-hidden"
                     >
-                      <div className="px-4 py-3 border-b border-white/[0.06]">
-                        <p className="text-sm font-medium text-white truncate">{user.name}</p>
-                        <p className="text-xs text-white/30 truncate">{user.email}</p>
+                      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06]">
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.name}
+                          className="w-9 h-9 rounded-full ring-1 ring-white/10 object-cover flex-shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{user.name}</p>
+                          <p className="text-xs text-white/30 truncate">{user.email}</p>
+                        </div>
                       </div>
                       <div className="py-1">
+                        <Link
+                          to="/profile"
+                          onClick={() => setShowProfileMenu(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.04] transition-colors"
+                        >
+                          <IoSettingsOutline size={15} />
+                          Profile
+                        </Link>
                         <Link
                           to="/my-list"
                           onClick={() => setShowProfileMenu(false)}
@@ -127,6 +151,17 @@ export default function Navbar() {
                           <IoPersonOutline size={15} />
                           Watchlist
                         </Link>
+                        {user.isAdult && (
+                          <button
+                            onClick={toggleAdult}
+                            className="flex items-center justify-between px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.04] transition-colors w-full"
+                          >
+                            <span>18+ Content</span>
+                            <div className={`w-8 h-[18px] rounded-full transition-colors relative ${adultEnabled ? 'bg-white/30' : 'bg-white/10'}`}>
+                              <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full transition-all ${adultEnabled ? 'left-[15px] bg-white' : 'left-[2px] bg-white/40'}`} />
+                            </div>
+                          </button>
+                        )}
                         <button
                           onClick={handleLogout}
                           className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.04] transition-colors w-full text-left"
@@ -162,6 +197,9 @@ export default function Navbar() {
         isOpen={showMobileMenu}
         onClose={() => setShowMobileMenu(false)}
         links={navLinks.filter((link) => !link.authOnly || user)}
+        user={user}
+        adultEnabled={adultEnabled}
+        toggleAdult={toggleAdult}
       />
     </>
   );

@@ -6,6 +6,7 @@ import tmdb from '@/api/tmdb';
 import { ENDPOINTS } from '@/api/endpoints';
 import { pageVariants, staggerContainer, fadeInUp } from '@/utils/animations';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useAuth } from '@/context/AuthContext';
 import MovieCard from '@/components/cards/MovieCard';
 import MovieCardSkeleton from '@/components/cards/MovieCardSkeleton';
 import { getMediaType } from '@/utils/helpers';
@@ -13,6 +14,7 @@ import { getMediaType } from '@/utils/helpers';
 const TABS = ['All', 'Movies', 'TV Shows'];
 
 export default function SearchPage() {
+  const { adultEnabled } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
   const [query, setQuery] = useState(initialQuery);
@@ -28,11 +30,11 @@ export default function SearchPage() {
     }
     setLoading(true);
     setSearchParams({ q: debouncedQuery });
-    tmdb.get(ENDPOINTS.SEARCH_MULTI, { params: { query: debouncedQuery } })
+    tmdb.get(ENDPOINTS.SEARCH_MULTI, { params: { query: debouncedQuery, include_adult: adultEnabled } })
       .then((res) => setResults(res.results?.filter((r) => r.media_type !== 'person') || []))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [debouncedQuery]);
+  }, [debouncedQuery, adultEnabled]);
 
   const filtered = results.filter((item) => {
     if (activeTab === 'Movies') return getMediaType(item) === 'movie';

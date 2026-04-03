@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoPlay, IoAdd, IoCheckmark, IoCalendar, IoTv, IoChevronDown, IoFilm } from 'react-icons/io5';
 import tmdb from '@/api/tmdb';
-import { ENDPOINTS, getBackdropUrl, getPosterUrl } from '@/api/endpoints';
+import { ENDPOINTS, getBackdropUrl, getPosterUrl, getTvCertification } from '@/api/endpoints';
 import { formatDate } from '@/utils/helpers';
 import { pageVariants, fadeInUp } from '@/utils/animations';
 import { useMyList } from '@/context/MyListContext';
@@ -16,6 +16,8 @@ import Modal from '@/components/ui/Modal';
 import TvLoader from '@/components/ui/TvLoader';
 import CastCarousel from '@/components/carousels/CastCarousel';
 import ContentRow from '@/components/carousels/ContentRow';
+import ReviewSection from '@/components/sections/ReviewSection';
+import WatchProviders from '@/components/sections/WatchProviders';
 
 export default function TvDetailPage() {
   const { id } = useParams();
@@ -25,6 +27,9 @@ export default function TvDetailPage() {
   const [credits, setCredits] = useState(null);
   const [videos, setVideos] = useState(null);
   const [similar, setSimilar] = useState(null);
+  const [reviews, setReviews] = useState(null);
+  const [watchProviders, setWatchProviders] = useState(null);
+  const [certification, setCertification] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showTrailer, setShowTrailer] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState(1);
@@ -40,12 +45,18 @@ export default function TvDetailPage() {
       tmdb.get(ENDPOINTS.TV_CREDITS(id)),
       tmdb.get(ENDPOINTS.TV_VIDEOS(id)),
       tmdb.get(ENDPOINTS.TV_SIMILAR(id)),
+      tmdb.get(ENDPOINTS.TV_REVIEWS(id)),
+      tmdb.get(ENDPOINTS.TV_CONTENT_RATINGS(id)),
+      tmdb.get(ENDPOINTS.TV_WATCH_PROVIDERS(id)),
     ])
-      .then(([showData, creditsData, videosData, similarData]) => {
+      .then(([showData, creditsData, videosData, similarData, reviewsData, contentRatingsData, watchProvidersData]) => {
         setShow(showData);
         setCredits(creditsData);
         setVideos(videosData);
         setSimilar(similarData);
+        setReviews(reviewsData);
+        setCertification(getTvCertification(contentRatingsData));
+        setWatchProviders(watchProvidersData);
         if (showData.number_of_seasons > 0) {
           setSelectedSeason(1);
         }
@@ -119,6 +130,11 @@ export default function TvDetailPage() {
 
             <div className="flex flex-wrap items-center gap-4">
               <Rating value={show.vote_average} size="md" />
+              {certification && (
+                <span className="px-2 py-0.5 text-xs font-semibold border border-white/20 rounded text-white/70 tracking-wide">
+                  {certification.certification}
+                </span>
+              )}
               <div className="flex items-center gap-1.5 text-sm text-white/60">
                 <IoCalendar size={14} />
                 {formatDate(show.first_air_date)}
@@ -307,6 +323,12 @@ export default function TvDetailPage() {
         <div className="mt-12">
           <CastCarousel cast={credits?.cast} />
         </div>
+
+        {/* Reviews */}
+        <ReviewSection reviews={reviews} />
+
+        {/* Where to Watch */}
+        <WatchProviders watchProviders={watchProviders} />
 
         {/* Similar Shows */}
         {similar?.results?.length > 0 && (

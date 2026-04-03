@@ -1,22 +1,28 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { IoEye, IoEyeOff } from 'react-icons/io5';
+import { IoEye, IoEyeOff, IoMailOutline } from 'react-icons/io5';
 import { useAuth } from '@/context/AuthContext';
 import { pageVariants } from '@/utils/animations';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { login, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
 
-  const handleSubmit = (e) => {
+  // Redirect if already logged in
+  if (user) return <Navigate to="/" replace />;
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setNeedsVerification(false);
 
     if (!email.trim() || !password.trim()) {
       setError('Please fill in all fields');
@@ -24,15 +30,16 @@ export default function LoginPage() {
     }
 
     setSubmitting(true);
-    setTimeout(() => {
-      const result = login(email, password);
-      if (result.success) {
-        navigate('/');
-      } else {
-        setError(result.error);
+    const result = await login(email, password);
+    if (result.success) {
+      navigate('/');
+    } else {
+      if (result.error.includes('confirm') || result.error.includes('verify')) {
+        setNeedsVerification(true);
       }
-      setSubmitting(false);
-    }, 600);
+      setError(result.error);
+    }
+    setSubmitting(false);
   };
 
   return (
@@ -101,8 +108,23 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* Verification needed banner */}
+            {needsVerification && (
+              <motion.div
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-start gap-2.5 bg-amber-500/[0.06] border border-amber-500/15 rounded-md px-3 py-2.5"
+              >
+                <IoMailOutline size={16} className="text-amber-400/70 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-medium text-amber-400/80">Email not verified</p>
+                  <p className="text-[11px] text-amber-400/50 mt-0.5">Please check your inbox and click the verification link to continue.</p>
+                </div>
+              </motion.div>
+            )}
+
             {/* Error */}
-            {error && (
+            {error && !needsVerification && (
               <motion.p
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}

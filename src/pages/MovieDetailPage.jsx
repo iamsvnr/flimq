@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { IoPlay, IoAdd, IoCheckmark, IoCalendar, IoTime } from 'react-icons/io5';
 import tmdb from '@/api/tmdb';
-import { ENDPOINTS, getBackdropUrl, getPosterUrl } from '@/api/endpoints';
+import { ENDPOINTS, getBackdropUrl, getPosterUrl, getMovieCertification } from '@/api/endpoints';
 import { getTitle, formatDate, formatRuntime, truncateText } from '@/utils/helpers';
 import { pageVariants, fadeInUp } from '@/utils/animations';
 import { useMyList } from '@/context/MyListContext';
@@ -16,6 +16,8 @@ import Modal from '@/components/ui/Modal';
 import MovieLoader from '@/components/ui/MovieLoader';
 import CastCarousel from '@/components/carousels/CastCarousel';
 import ContentRow from '@/components/carousels/ContentRow';
+import ReviewSection from '@/components/sections/ReviewSection';
+import WatchProviders from '@/components/sections/WatchProviders';
 
 export default function MovieDetailPage() {
   const { id } = useParams();
@@ -25,6 +27,9 @@ export default function MovieDetailPage() {
   const [credits, setCredits] = useState(null);
   const [videos, setVideos] = useState(null);
   const [similar, setSimilar] = useState(null);
+  const [reviews, setReviews] = useState(null);
+  const [watchProviders, setWatchProviders] = useState(null);
+  const [certification, setCertification] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showTrailer, setShowTrailer] = useState(false);
 
@@ -37,12 +42,18 @@ export default function MovieDetailPage() {
       tmdb.get(ENDPOINTS.MOVIE_CREDITS(id)),
       tmdb.get(ENDPOINTS.MOVIE_VIDEOS(id)),
       tmdb.get(ENDPOINTS.MOVIE_SIMILAR(id)),
+      tmdb.get(ENDPOINTS.MOVIE_REVIEWS(id)),
+      tmdb.get(ENDPOINTS.MOVIE_RELEASE_DATES(id)),
+      tmdb.get(ENDPOINTS.MOVIE_WATCH_PROVIDERS(id)),
     ])
-      .then(([movieData, creditsData, videosData, similarData]) => {
+      .then(([movieData, creditsData, videosData, similarData, reviewsData, releaseDatesData, watchProvidersData]) => {
         setMovie(movieData);
         setCredits(creditsData);
         setVideos(videosData);
         setSimilar(similarData);
+        setReviews(reviewsData);
+        setCertification(getMovieCertification(releaseDatesData));
+        setWatchProviders(watchProvidersData);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -105,6 +116,11 @@ export default function MovieDetailPage() {
 
             <div className="flex flex-wrap items-center gap-4">
               <Rating value={movie.vote_average} size="md" />
+              {certification && (
+                <span className="px-2 py-0.5 text-xs font-semibold border border-white/20 rounded text-white/70 tracking-wide">
+                  {certification.certification}
+                </span>
+              )}
               <div className="flex items-center gap-1.5 text-sm text-white/60">
                 <IoCalendar size={14} />
                 {formatDate(movie.release_date)}
@@ -167,6 +183,12 @@ export default function MovieDetailPage() {
         <div className="mt-12">
           <CastCarousel cast={credits?.cast} />
         </div>
+
+        {/* Reviews */}
+        <ReviewSection reviews={reviews} />
+
+        {/* Where to Watch */}
+        <WatchProviders watchProviders={watchProviders} />
 
         {/* Similar Movies */}
         {similar?.results?.length > 0 && (

@@ -16,6 +16,7 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const PersonDetailPage = lazy(() => import('./pages/PersonDetailPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const SignUpPage = lazy(() => import('./pages/SignUpPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const LoaderPreviewPage = lazy(() => import('./pages/LoaderPreviewPage'));
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
                 <Route path="my-list" element={<MyListPage />} />
                 <Route path="login" element={<LoginPage />} />
                 <Route path="signup" element={<SignUpPage />} />
+                <Route path="profile" element={<ProfilePage />} />
                 <Route path="loader" element={<LoaderPreviewPage />} />
                 <Route path="loader/:type" element={<LoaderPreviewPage />} />
                 <Route path="*" element={<NotFoundPage />} />

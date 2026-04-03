@@ -4,6 +4,7 @@ import { IoFilter } from 'react-icons/io5';
 import tmdb from '@/api/tmdb';
 import { ENDPOINTS } from '@/api/endpoints';
 import { pageVariants, staggerContainer, fadeInUp } from '@/utils/animations';
+import { useAuth } from '@/context/AuthContext';
 import MovieCard from '@/components/cards/MovieCard';
 import MovieCardSkeleton from '@/components/cards/MovieCardSkeleton';
 import Button from '@/components/ui/Button';
@@ -16,6 +17,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function MoviesPage() {
+  const { adultEnabled } = useAuth();
   const [movies, setMovies] = useState([]);
   const [genres, setGenres] = useState([]);
   const [selectedGenre, setSelectedGenre] = useState('');
@@ -35,6 +37,7 @@ export default function MoviesPage() {
     const params = {
       sort_by: sortBy,
       page: pageNum,
+      include_adult: adultEnabled,
       'vote_count.gte': sortBy === 'vote_average.desc' ? 200 : undefined,
     };
     if (selectedGenre) params.with_genres = selectedGenre;
@@ -46,7 +49,7 @@ export default function MoviesPage() {
       })
       .catch(console.error)
       .finally(() => setter(false));
-  }, [sortBy, selectedGenre]);
+  }, [sortBy, selectedGenre, adultEnabled]);
 
   useEffect(() => {
     setPage(1);
