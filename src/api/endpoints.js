@@ -29,8 +29,10 @@ export const ENDPOINTS = {
   PERSON_IMAGES: (id) => `/person/${id}/images`,
 };
 
+const IMAGE_BASE = 'https://image.tmdb.org/t/p';
+
 export const getImageUrl = (path, size = 'w500') =>
-  path ? `${import.meta.env.VITE_TMDB_IMAGE_BASE}/${size}${path}` : null;
+  path ? `${IMAGE_BASE}/${size}${path}` : null;
 
 export const getBackdropUrl = (path) => getImageUrl(path, 'w1280');
 export const getOriginalUrl = (path) => getImageUrl(path, 'original');
