@@ -19,7 +19,7 @@ A modern movie & TV show discovery app built with React, inspired by Netflix, Ho
 - **Framer Motion** for animations
 - **Swiper.js** for carousels
 - **TMDB API** for movie data
-- **Vercel Serverless Functions** for API key protection
+- **Netlify Functions** for API key protection
 
 ## Getting Started
 
@@ -44,4 +44,4 @@ npm run dev
 
 ## Deployment
 
-Deployed on **Vercel**. Add `TMDB_API_KEY` as an environment variable in your Vercel project settings — the serverless function at `/api/tmdb.js` proxies all TMDB requests so the key stays hidden from the browser.
+Deployed on **Netlify**. Add `TMDB_API_KEY` as an environment variable in your Netlify site settings (Site settings → Environment variables) — the serverless function at `/.netlify/functions/tmdb` proxies all TMDB requests so the key stays hidden from the browser.
