@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { IoPlay, IoAdd, IoCheckmark, IoArrowBack, IoCalendar, IoTime } from 'react-icons/io5';
+import { IoPlay, IoAdd, IoCheckmark, IoCalendar, IoTime } from 'react-icons/io5';
 import tmdb from '@/api/tmdb';
 import { ENDPOINTS, getBackdropUrl, getPosterUrl } from '@/api/endpoints';
 import { getTitle, formatDate, formatRuntime, truncateText } from '@/utils/helpers';
@@ -19,7 +19,6 @@ import ContentRow from '@/components/carousels/ContentRow';
 
 export default function MovieDetailPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { addToList, removeFromList, isInList } = useMyList();
   const { user } = useAuth();
   const [movie, setMovie] = useState(null);
@@ -69,16 +68,6 @@ export default function MovieDetailPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/50 to-[#0a0a0a]/20" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/90 via-[#0a0a0a]/30 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
-
-        {/* Back Button */}
-        <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          onClick={() => navigate(-1)}
-          className="absolute top-20 left-4 md:left-10 z-10 p-2 rounded-md bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
-        >
-          <IoArrowBack size={20} />
-        </motion.button>
       </div>
 
       {/* Content */}

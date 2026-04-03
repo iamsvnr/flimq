@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { IoArrowBack, IoCalendar, IoLocation, IoFilm, IoTv } from 'react-icons/io5';
+import { IoCalendar, IoLocation, IoFilm, IoTv } from 'react-icons/io5';
 import tmdb from '@/api/tmdb';
 import { ENDPOINTS, getProfileUrl, getImageUrl, getPosterUrl } from '@/api/endpoints';
 import { formatDate, formatYear } from '@/utils/helpers';
@@ -12,7 +12,6 @@ import ContentRow from '@/components/carousels/ContentRow';
 
 export default function PersonDetailPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [person, setPerson] = useState(null);
   const [movieCredits, setMovieCredits] = useState(null);
   const [tvCredits, setTvCredits] = useState(null);
@@ -71,16 +70,6 @@ export default function PersonDetailPage() {
       <div className="relative min-h-[40vh] md:min-h-[50vh]">
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-surface-900/80 to-surface-900" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--color-white)_0%,_transparent_60%)] opacity-20" />
-
-        {/* Back Button */}
-        <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          onClick={() => navigate(-1)}
-          className="absolute top-20 left-4 md:left-8 z-10 p-2 rounded-full glass text-white hover:bg-white/10 transition-colors"
-        >
-          <IoArrowBack size={22} />
-        </motion.button>
       </div>
 
       {/* Person Content */}
