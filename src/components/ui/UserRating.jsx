@@ -17,9 +17,6 @@ export default function UserRating({ rating, onRate, disabled }) {
           )}
         </button>
       ))}
-      {rating && (
-        <span className="text-xs text-white/40 ml-1">Your rating</span>
-      )}
     </div>
   );
 }

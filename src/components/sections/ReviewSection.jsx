@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { IoStar, IoStarHalf, IoStarOutline, IoChevronDown, IoChevronUp } from 'react-icons/io5';
+import { motion, AnimatePresence } from 'framer-motion';
+import { IoStar, IoStarHalf, IoStarOutline, IoChevronDown, IoChevronUp, IoCreateOutline, IoTrashOutline } from 'react-icons/io5';
 import { getImageUrl } from '@/api/endpoints';
+import { useAuth } from '@/context/AuthContext';
+import { useUserReview } from '@/hooks/useUserReview';
 
 // Render star icons for a given rating (out of 10 → displayed as out of 5)
 function StarDisplay({ rating }) {
@@ -234,17 +236,91 @@ function ReviewCard({ review, index }) {
   );
 }
 
-export default function ReviewSection({ reviews }) {
+function UserReviewCard({ review, index }) {
+  const name = review.author_name || 'User';
+  const avatarUrl = review.avatar_url;
+  const date = review.created_at
+    ? new Date(review.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    : null;
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.05 + index * 0.07, duration: 0.35 }}
+      className="group relative p-4 md:p-5 rounded-xl border border-white/[0.06] bg-white/[0.015] hover:bg-white/[0.025] hover:border-white/[0.1] transition-all duration-300"
+    >
+      <div className="flex items-start gap-3 mb-3">
+        <div className="relative shrink-0">
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={name}
+              className="w-10 h-10 rounded-full object-cover ring-1 ring-white/10"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+          ) : null}
+          <div
+            className={`w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-white/[0.03] ring-1 ring-white/10 items-center justify-center text-sm font-bold text-white/40 ${avatarUrl ? 'hidden' : 'flex'}`}
+          >
+            {name.charAt(0).toUpperCase()}
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-white/80 truncate">{name}</p>
+            <span className="text-[9px] text-white/20 px-1.5 py-0.5 rounded bg-white/[0.04]">FLIMQ</span>
+          </div>
+          {date && <p className="text-[11px] text-white/20 mt-0.5">{date}</p>}
+        </div>
+      </div>
+      <div className="text-[13px] text-white/45 leading-relaxed break-words pl-[52px]">
+        {review.content}
+      </div>
+    </motion.div>
+  );
+}
+
+export default function ReviewSection({ reviews, tmdbId, mediaType }) {
+  const { user } = useAuth();
+  const { myReview, allReviews: userReviews, saveReview, deleteReview } = useUserReview(tmdbId, mediaType);
   const [showAll, setShowAll] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [reviewContent, setReviewContent] = useState('');
 
-  if (!reviews?.results?.length) return null;
+  useEffect(() => {
+    if (myReview) setReviewContent(myReview.content);
+  }, [myReview]);
 
-  const allReviews = reviews.results;
-  const firstThree = allReviews.slice(0, 3);
-  const remaining = allReviews.slice(3);
+  const handleSave = async () => {
+    if (reviewContent.trim().length < 10) return;
+    await saveReview(reviewContent.trim());
+    setIsEditing(false);
+  };
 
-  // Calculate rating distribution (for the summary)
-  const rated = allReviews.filter((r) => r.author_details?.rating);
+  const handleDelete = async () => {
+    await deleteReview();
+    setReviewContent('');
+    setIsEditing(false);
+  };
+
+  // Other users' reviews (exclude current user's — shown separately)
+  const otherUserReviews = user
+    ? userReviews.filter((r) => r.user_id !== user.id)
+    : userReviews;
+
+  const tmdbReviews = reviews?.results || [];
+  const allCombined = [...otherUserReviews, ...tmdbReviews];
+  const totalCount = allCombined.length + (myReview ? 1 : 0);
+  const firstThree = allCombined.slice(0, 3);
+  const remaining = allCombined.slice(3);
+
+  // Calculate rating distribution (for the summary — TMDB reviews only)
+  const rated = tmdbReviews.filter((r) => r.author_details?.rating);
   const avgRating = rated.length > 0
     ? (rated.reduce((sum, r) => sum + r.author_details.rating, 0) / rated.length).toFixed(1)
     : null;
@@ -258,6 +334,8 @@ export default function ReviewSection({ reviews }) {
     { label: '1', count: rated.filter((r) => r.author_details.rating < 3).length },
   ];
 
+  if (!allCombined.length && !user) return null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -270,10 +348,97 @@ export default function ReviewSection({ reviews }) {
         <h2 className="text-xl md:text-2xl font-bold font-heading text-white">
           Reviews
         </h2>
-        <span className="text-xs text-white/20 px-2 py-0.5 rounded-full border border-white/[0.06]">
-          {allReviews.length}
-        </span>
+        {totalCount > 0 && (
+          <span className="text-xs text-white/20 px-2 py-0.5 rounded-full border border-white/[0.06]">
+            {totalCount}
+          </span>
+        )}
       </div>
+
+      {/* User review area */}
+      {user && (
+        <div className="mb-6">
+          <AnimatePresence mode="wait">
+            {isEditing ? (
+              <motion.div
+                key="editing"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02]"
+              >
+                <textarea
+                  value={reviewContent}
+                  onChange={(e) => setReviewContent(e.target.value)}
+                  placeholder="Share your thoughts... (min 10 characters)"
+                  maxLength={2000}
+                  rows={4}
+                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-lg p-3 text-sm text-white/80 placeholder-white/20 resize-none focus:outline-none focus:border-white/15 transition-colors"
+                />
+                <div className="flex items-center justify-between mt-3">
+                  <span className="text-[11px] text-white/25">{reviewContent.length}/2000</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setIsEditing(false); setReviewContent(myReview?.content || ''); }}
+                      className="px-4 py-1.5 text-xs text-white/40 hover:text-white/70 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={reviewContent.trim().length < 10}
+                      className="px-4 py-1.5 bg-white/[0.08] hover:bg-white/[0.12] text-white/80 rounded-lg text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      {myReview ? 'Update' : 'Post'}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ) : myReview ? (
+              <motion.div
+                key="display"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02]"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium">Your Review</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="p-1.5 text-white/30 hover:text-white/60 transition-colors"
+                    >
+                      <IoCreateOutline size={15} />
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="p-1.5 text-white/30 hover:text-red-400/70 transition-colors"
+                    >
+                      <IoTrashOutline size={15} />
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[13px] text-white/50 leading-relaxed">{myReview.content}</p>
+                <span className="text-[10px] text-white/20 mt-2 block">
+                  {new Date(myReview.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                </span>
+              </motion.div>
+            ) : (
+              <motion.button
+                key="prompt"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsEditing(true)}
+                className="w-full p-4 rounded-xl border border-dashed border-white/[0.08] text-sm text-white/30 hover:text-white/50 hover:border-white/15 transition-all"
+              >
+                Write a Review
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Rating summary card + distribution */}
       {rated.length > 0 && (
@@ -319,7 +484,9 @@ export default function ReviewSection({ reviews }) {
       {/* Review cards - first 3 always visible */}
       <div className="space-y-3">
         {firstThree.map((review, i) => (
-          <ReviewCard key={review.id} review={review} index={i} />
+          review.user_id
+            ? <UserReviewCard key={review.id || review.user_id} review={review} index={i} />
+            : <ReviewCard key={review.id} review={review} index={i} />
         ))}
       </div>
 
@@ -328,21 +495,23 @@ export default function ReviewSection({ reviews }) {
         <ExpandCollapse expanded={showAll}>
           <div className="space-y-3 pt-3">
             {remaining.map((review, i) => (
-              <ReviewCard key={review.id} review={review} index={i} />
+              review.user_id
+                ? <UserReviewCard key={review.id || review.user_id} review={review} index={i} />
+                : <ReviewCard key={review.id} review={review} index={i} />
             ))}
           </div>
         </ExpandCollapse>
       )}
 
       {/* Show all / collapse button */}
-      {allReviews.length > 3 && (
+      {allCombined.length > 3 && (
         <motion.button
           onClick={() => setShowAll(!showAll)}
           className="mt-5 flex items-center gap-2 px-5 py-2.5 text-sm text-white/35 hover:text-white/60 border border-white/[0.06] hover:border-white/15 rounded-lg transition-all duration-300"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          {showAll ? 'Show fewer reviews' : `Show all ${allReviews.length} reviews`}
+          {showAll ? 'Show fewer reviews' : `Show all ${allCombined.length} reviews`}
           <motion.span
             animate={{ rotate: showAll ? 180 : 0 }}
             transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}

@@ -28,7 +28,7 @@ export default function TvDetailPage() {
   const { id } = useParams();
   const { addToList, removeFromList, isInList } = useMyList();
   const { user } = useAuth();
-  const { rating: userRating, setUserRating } = useUserRating(Number(id), 'tv');
+  const { rating: userRating, setUserRating, avgRating: communityRating, totalRatings, allRatings } = useUserRating(Number(id), 'tv');
   const { watched, toggleWatched } = useWatchedStatus(Number(id), 'tv');
   const [show, setShow] = useState(null);
   const [credits, setCredits] = useState(null);
@@ -213,15 +213,36 @@ export default function TvDetailPage() {
             </div>
 
             {/* User Rating */}
-            {user && (
-              <div className="flex items-center gap-3 pt-1">
-                <span className="text-xs text-white/30">Rate this:</span>
-                <UserRatingComponent
-                  rating={userRating}
-                  onRate={(val) => val ? setUserRating(val) : setUserRating(null)}
-                />
-              </div>
-            )}
+            <div className="flex items-center gap-3 pt-1 flex-wrap">
+              {user && (
+                <>
+                  <span className="text-xs text-white/30">Rate this:</span>
+                  <UserRatingComponent
+                    rating={userRating}
+                    onRate={(val) => val ? setUserRating(val) : setUserRating(null)}
+                  />
+                </>
+              )}
+              {totalRatings > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center -space-x-1.5">
+                    {allRatings.slice(0, 3).map((r, i) => (
+                      <div key={r.user_id} className="w-6 h-6 rounded-full bg-white/10 border border-white/[0.08] flex items-center justify-center text-[9px] font-bold text-white/50 overflow-hidden" style={{ zIndex: 3 - i }}>
+                        {r.avatar_url ? (
+                          <img src={r.avatar_url} alt={r.author_name || 'User'} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = ''; }} />
+                        ) : null}
+                        <span style={{ display: r.avatar_url ? 'none' : '' }}>{(r.author_name || 'U').charAt(0).toUpperCase()}</span>
+                      </div>
+                    ))}
+                    {totalRatings > 3 && (
+                      <div className="w-6 h-6 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-[8px] font-medium text-white/40" style={{ zIndex: 0 }}>
+                        +{totalRatings - 3}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </motion.div>
         </div>
 
@@ -359,7 +380,7 @@ export default function TvDetailPage() {
         </div>
 
         {/* Reviews */}
-        <ReviewSection reviews={reviews} />
+        <ReviewSection reviews={reviews} tmdbId={Number(id)} mediaType="tv" />
 
         {/* Where to Watch */}
         <WatchProviders watchProviders={watchProviders} />
