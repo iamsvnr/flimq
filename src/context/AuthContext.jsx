@@ -63,6 +63,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [adultEnabled, setAdultEnabled] = useState(false);
+  const [preferredLanguage, setPreferredLanguage] = useState('');
 
   const fetchProfile = async (userId) => {
     try {
@@ -138,6 +139,7 @@ export function AuthProvider({ children }) {
         currentUserId = null;
         setUser(null);
         setAdultEnabled(false);
+        setPreferredLanguage('');
         setReady();
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         restore(session?.user || null);
@@ -157,11 +159,12 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await supabase
         .from('user_preferences')
-        .select('adult_enabled')
+        .select('adult_enabled, preferred_language')
         .eq('user_id', userId)
         .maybeSingle();
       if (data) {
         setAdultEnabled(data.adult_enabled || false);
+        setPreferredLanguage(data.preferred_language || '');
       }
     } catch {}
   };
@@ -208,6 +211,7 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut();
     setUser(null);
     setAdultEnabled(false);
+    setPreferredLanguage('');
   };
 
   const toggleAdult = async () => {
@@ -217,6 +221,14 @@ export function AuthProvider({ children }) {
     await supabase
       .from('user_preferences')
       .upsert({ user_id: user.id, adult_enabled: newValue }, { onConflict: 'user_id' });
+  };
+
+  const updatePreferredLanguage = async (langCode) => {
+    if (!user) return;
+    setPreferredLanguage(langCode);
+    await supabase
+      .from('user_preferences')
+      .upsert({ user_id: user.id, preferred_language: langCode }, { onConflict: 'user_id' });
   };
 
   const resetPassword = async (email) => {
@@ -294,11 +306,12 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut();
     setUser(null);
     setAdultEnabled(false);
+    setPreferredLanguage('');
     return { success: true };
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, adultEnabled, toggleAdult, resetPassword, updateProfile, updateGender, deleteAccount }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, adultEnabled, toggleAdult, preferredLanguage, updatePreferredLanguage, resetPassword, updateProfile, updateGender, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );

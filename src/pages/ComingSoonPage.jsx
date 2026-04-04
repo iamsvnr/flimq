@@ -8,25 +8,28 @@ import { formatDate } from '@/utils/helpers';
 import MovieCard from '@/components/cards/MovieCard';
 import MovieCardSkeleton from '@/components/cards/MovieCardSkeleton';
 import SEO from '@/components/ui/SEO';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ComingSoonPage() {
+  const { preferredLanguage } = useAuth();
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
-    tmdb.get(ENDPOINTS.DISCOVER_MOVIE, {
-      params: {
-        sort_by: 'primary_release_date.asc',
-        'primary_release_date.gte': today,
-        'vote_count.gte': 0,
-        page: 1,
-      },
-    })
+    const params = {
+      sort_by: 'primary_release_date.asc',
+      'primary_release_date.gte': today,
+      'vote_count.gte': 0,
+      page: 1,
+    };
+    if (preferredLanguage) params.with_original_language = preferredLanguage;
+
+    tmdb.get(ENDPOINTS.DISCOVER_MOVIE, { params })
       .then((res) => setMovies(res.results || []))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [preferredLanguage]);
 
   // Group by month
   const groups = movies.reduce((acc, movie) => {

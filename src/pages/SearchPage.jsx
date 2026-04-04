@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { IoSearch } from 'react-icons/io5';
@@ -20,21 +20,57 @@ export default function SearchPage() {
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [activeTab, setActiveTab] = useState('All');
   const debouncedQuery = useDebounce(query, 300);
+  const loaderRef = useRef(null);
 
-  useEffect(() => {
+  const fetchResults = useCallback((pageNum, reset = false) => {
     if (!debouncedQuery || debouncedQuery.length < 2) {
       setResults([]);
       return;
     }
-    setLoading(true);
-    setSearchParams({ q: debouncedQuery });
-    tmdb.get(ENDPOINTS.SEARCH_MULTI, { params: { query: debouncedQuery, include_adult: adultEnabled } })
-      .then((res) => setResults(res.results?.filter((r) => r.media_type !== 'person' && (adultEnabled || !r.adult)) || []))
+    const setter = reset ? setLoading : setLoadingMore;
+    setter(true);
+    if (reset) setSearchParams({ q: debouncedQuery });
+
+    tmdb.get(ENDPOINTS.SEARCH_MULTI, { params: { query: debouncedQuery, include_adult: adultEnabled, page: pageNum } })
+      .then((res) => {
+        const filtered = res.results?.filter((r) => r.media_type !== 'person' && (adultEnabled || !r.adult)) || [];
+        setResults((prev) => reset ? filtered : [...prev, ...filtered]);
+        setTotalPages(res.total_pages || 1);
+      })
       .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [debouncedQuery, adultEnabled]);
+      .finally(() => setter(false));
+  }, [debouncedQuery, adultEnabled, setSearchParams]);
+
+  // Reset on new query
+  useEffect(() => {
+    setPage(1);
+    fetchResults(1, true);
+  }, [fetchResults]);
+
+  // Infinite scroll
+  useEffect(() => {
+    if (loading || loadingMore) return;
+    const el = loaderRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && page < totalPages && !loadingMore) {
+          const nextPage = page + 1;
+          setPage(nextPage);
+          fetchResults(nextPage);
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading, loadingMore, page, totalPages, fetchResults]);
 
   const filtered = results.filter((item) => {
     if (!adultEnabled && item.adult) return false;
@@ -85,18 +121,32 @@ export default function SearchPage() {
           ))}
         </div>
       ) : filtered.length > 0 ? (
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
-        >
-          {filtered.map((item) => (
-            <motion.div key={item.id} variants={fadeInUp}>
-              <MovieCard item={item} />
-            </motion.div>
-          ))}
-        </motion.div>
+        <>
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+          >
+            {filtered.map((item, index) => (
+              <motion.div key={`${item.id}-${index}`} variants={fadeInUp}>
+                <MovieCard item={item} />
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Infinite scroll trigger */}
+          {page < totalPages && (
+            <div ref={loaderRef} className="flex justify-center mt-10 py-8">
+              {loadingMore && (
+                <div className="flex items-center gap-2 text-white/30 text-sm">
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+                  Loading more...
+                </div>
+              )}
+            </div>
+          )}
+        </>
       ) : debouncedQuery && !loading ? (
         <div className="text-center py-20">
           <IoSearch className="mx-auto mb-4 text-white/10" size={64} />

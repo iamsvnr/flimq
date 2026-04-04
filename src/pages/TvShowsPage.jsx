@@ -16,7 +16,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function TvShowsPage() {
-  const { adultEnabled } = useAuth();
+  const { adultEnabled, preferredLanguage } = useAuth();
   const [shows, setShows] = useState([]);
   const [genres, setGenres] = useState([]);
   const [selectedGenre, setSelectedGenre] = useState('');
@@ -41,6 +41,7 @@ export default function TvShowsPage() {
       'vote_count.gte': sortBy === 'vote_average.desc' ? 200 : undefined,
     };
     if (selectedGenre) params.with_genres = selectedGenre;
+    if (preferredLanguage) params.with_original_language = preferredLanguage;
 
     tmdb.get(ENDPOINTS.DISCOVER_TV, { params })
       .then((res) => {
@@ -52,7 +53,7 @@ export default function TvShowsPage() {
       })
       .catch(console.error)
       .finally(() => setter(false));
-  }, [sortBy, selectedGenre, adultEnabled]);
+  }, [sortBy, selectedGenre, adultEnabled, preferredLanguage]);
 
   useEffect(() => {
     setPage(1);

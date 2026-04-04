@@ -1,21 +1,32 @@
 import axios from 'axios';
+import { getUserRegion } from './endpoints';
 
 const isDev = import.meta.env.DEV;
+
+// Fetch region from IP, fall back to browser locale
+let ipRegion = null;
+const ipRegionPromise = fetch('https://ipapi.co/country/')
+  .then((res) => res.ok ? res.text() : null)
+  .then((code) => { ipRegion = code?.trim() || null; console.log('IP region:', ipRegion); })
+  .catch(() => {});
 
 const tmdb = axios.create({
   baseURL: isDev ? import.meta.env.VITE_TMDB_BASE_URL : '/.netlify/functions/tmdb',
   params: isDev ? { api_key: import.meta.env.VITE_TMDB_API_KEY, language: 'en-US' } : {},
 });
 
-// In production, rewrite requests to use the proxy endpoint query param
-if (!isDev) {
-  tmdb.interceptors.request.use((config) => {
+// Inject region into every request
+tmdb.interceptors.request.use(async (config) => {
+  await ipRegionPromise;
+  const region = ipRegion || getUserRegion();
+  config.params = { ...config.params, region };
+  if (!isDev) {
     const endpoint = config.url;
     config.url = '';
     config.params = { ...config.params, endpoint };
-    return config;
-  });
-}
+  }
+  return config;
+});
 
 tmdb.interceptors.response.use(
   (response) => response.data,

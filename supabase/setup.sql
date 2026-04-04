@@ -18,7 +18,8 @@ CREATE POLICY "Users can update own profile" ON user_profiles FOR UPDATE USING (
 CREATE TABLE user_preferences (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
-  adult_enabled BOOLEAN DEFAULT false
+  adult_enabled BOOLEAN DEFAULT false,
+  preferred_language TEXT DEFAULT ''
 );
 
 ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { IoShieldCheckmark, IoMailOutline, IoPersonOutline, IoCalendarOutline, IoCheckmarkCircle, IoCloseCircle, IoMale, IoFemale, IoMaleFemale, IoTrashOutline, IoWarning } from 'react-icons/io5';
+import { IoShieldCheckmark, IoMailOutline, IoPersonOutline, IoCalendarOutline, IoCheckmarkCircle, IoCloseCircle, IoMale, IoFemale, IoMaleFemale, IoTrashOutline, IoWarning, IoLanguage } from 'react-icons/io5';
 import { useAuth } from '@/context/AuthContext';
 import { pageVariants } from '@/utils/animations';
 
@@ -11,8 +11,24 @@ const GENDERS = [
   { value: 'other', label: 'Other', icon: IoMaleFemale },
 ];
 
+const LANGUAGES = [
+  { code: '',   label: 'All Languages' },
+  { code: 'en', label: 'English' },
+  { code: 'hi', label: 'Hindi' },
+  { code: 'ta', label: 'Tamil' },
+  { code: 'te', label: 'Telugu' },
+  { code: 'ml', label: 'Malayalam' },
+  { code: 'kn', label: 'Kannada' },
+  { code: 'bn', label: 'Bengali' },
+  { code: 'mr', label: 'Marathi' },
+  { code: 'ko', label: 'Korean' },
+  { code: 'ja', label: 'Japanese' },
+  { code: 'es', label: 'Spanish' },
+  { code: 'fr', label: 'French' },
+];
+
 export default function ProfilePage() {
-  const { user, adultEnabled, toggleAdult, updateProfile, updateGender, resetPassword, deleteAccount } = useAuth();
+  const { user, adultEnabled, toggleAdult, updateProfile, updateGender, preferredLanguage, updatePreferredLanguage, resetPassword, deleteAccount } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState(user?.name || '');
@@ -28,6 +44,9 @@ export default function ProfilePage() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const [selectedLanguage, setSelectedLanguage] = useState(preferredLanguage || '');
+  const [languageMsg, setLanguageMsg] = useState(null);
 
   if (!user) return <Navigate to="/login" replace />;
 
@@ -68,6 +87,13 @@ export default function ProfilePage() {
     setDeleting(true);
     await deleteAccount();
     navigate('/');
+  };
+
+  const handleLanguageChange = async (langCode) => {
+    setSelectedLanguage(langCode);
+    setLanguageMsg(null);
+    await updatePreferredLanguage(langCode);
+    setLanguageMsg({ type: 'success', text: 'Language preference updated' });
   };
 
   const genderLabel = user.gender === 'male' ? 'Male' : user.gender === 'female' ? 'Female' : 'Other';
@@ -162,6 +188,33 @@ export default function ProfilePage() {
                 </motion.div>
               </button>
             </div>
+          )}
+        </div>
+
+        {/* Content Language */}
+        <div className="bg-[#111111] border border-white/[0.06] rounded-lg p-5">
+          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider flex items-center gap-2 mb-4">
+            <IoLanguage size={14} />
+            Content Language
+          </h2>
+          <p className="text-xs text-white/30 mb-3">Filter movies and TV shows by original language</p>
+          <select
+            value={selectedLanguage}
+            onChange={(e) => handleLanguageChange(e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-md text-sm text-white focus:outline-none focus:border-white/20 transition-colors cursor-pointer"
+          >
+            {LANGUAGES.map(({ code, label }) => (
+              <option key={code} value={code} className="bg-[#1a1a1a]">{label}</option>
+            ))}
+          </select>
+          {languageMsg && (
+            <motion.p
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xs px-3 py-2 rounded-md border mt-3 text-emerald-400/80 bg-emerald-400/[0.06] border-emerald-400/10"
+            >
+              {languageMsg.text}
+            </motion.p>
           )}
         </div>
 

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/supabase';
 import { useAuth } from '@/context/AuthContext';
 
+const isDev = import.meta.env.DEV;
+
 async function getAccessToken() {
   const { data: { session } } = await supabase.auth.getSession();
   return session?.access_token || '';
@@ -16,9 +18,20 @@ export function useUserReview(tmdbId, mediaType) {
   const fetchAll = useCallback(async () => {
     if (!tmdbId) { setLoading(false); return; }
     try {
-      const res = await fetch(`/.netlify/functions/reviews?tmdb_id=${tmdbId}&media_type=${mediaType}`);
-      const data = await res.json();
-      const reviews = Array.isArray(data) ? data : [];
+      let reviews;
+      if (isDev) {
+        const { data } = await supabase
+          .from('user_reviews')
+          .select('*')
+          .eq('tmdb_id', Number(tmdbId))
+          .eq('media_type', mediaType)
+          .order('created_at', { ascending: false });
+        reviews = data || [];
+      } else {
+        const res = await fetch(`/.netlify/functions/reviews?tmdb_id=${tmdbId}&media_type=${mediaType}`);
+        const data = await res.json();
+        reviews = Array.isArray(data) ? data : [];
+      }
       setAllReviews(reviews);
       if (user) {
         setMyReview(reviews.find((r) => r.user_id === user.id) || null);
@@ -77,21 +90,47 @@ export function useUserReview(tmdbId, mediaType) {
       return [optimistic, ...filtered];
     });
     try {
-      const token = await getAccessToken();
-      const res = await fetch('/.netlify/functions/reviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ tmdb_id: Number(tmdbId), media_type: mediaType, content }),
-      });
-      if (!res.ok) {
-        console.error('Review save error:', (await res.json()).error);
-        setMyReview(prev);
+      if (isDev) {
+        const { data, error } = await supabase
+          .from('user_reviews')
+          .upsert(
+            {
+              user_id: user.id,
+              tmdb_id: Number(tmdbId),
+              media_type: mediaType,
+              content,
+              author_name: user.name || user.email?.split('@')[0] || 'User',
+              avatar_url: user.avatarUrl || '',
+            },
+            { onConflict: 'user_id,tmdb_id,media_type' }
+          )
+          .select()
+          .single();
+        if (error) {
+          console.error('Review save error:', error.message);
+          setMyReview(prev);
+          fetchAll();
+          return;
+        }
+        setMyReview(data);
         fetchAll();
-        return;
+      } else {
+        const token = await getAccessToken();
+        const res = await fetch('/.netlify/functions/reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ tmdb_id: Number(tmdbId), media_type: mediaType, content }),
+        });
+        if (!res.ok) {
+          console.error('Review save error:', (await res.json()).error);
+          setMyReview(prev);
+          fetchAll();
+          return;
+        }
+        const data = await res.json();
+        setMyReview(data);
+        fetchAll();
       }
-      const data = await res.json();
-      setMyReview(data);
-      fetchAll();
     } catch (e) {
       console.error('Review save exception:', e);
       setMyReview(prev);
@@ -105,13 +144,23 @@ export function useUserReview(tmdbId, mediaType) {
     setMyReview(null);
     setAllReviews((reviews) => reviews.filter((r) => r.user_id !== user.id));
     try {
-      const token = await getAccessToken();
-      const res = await fetch('/.netlify/functions/reviews', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ tmdb_id: Number(tmdbId), media_type: mediaType }),
-      });
-      if (!res.ok) { setMyReview(prev); fetchAll(); }
+      if (isDev) {
+        const { error } = await supabase
+          .from('user_reviews')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('tmdb_id', Number(tmdbId))
+          .eq('media_type', mediaType);
+        if (error) { setMyReview(prev); fetchAll(); }
+      } else {
+        const token = await getAccessToken();
+        const res = await fetch('/.netlify/functions/reviews', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ tmdb_id: Number(tmdbId), media_type: mediaType }),
+        });
+        if (!res.ok) { setMyReview(prev); fetchAll(); }
+      }
     } catch {
       setMyReview(prev);
       fetchAll();
