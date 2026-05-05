@@ -1,7 +1,12 @@
-const API_KEY = process.env.TMDB_API_KEY;
 const BASE_URL = 'https://api.themoviedb.org/3';
 
 export const handler = async (event) => {
+  const API_KEY = process.env.TMDB_API_KEY;
+
+  if (!API_KEY) {
+    return { statusCode: 500, body: JSON.stringify({ error: 'TMDB_API_KEY environment variable is not set' }) };
+  }
+
   const params = event.queryStringParameters || {};
   const { endpoint, ...rest } = params;
 

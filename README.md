@@ -75,10 +75,11 @@ npm run build
 
 ### Environment Variables
 
-In Netlify, go to **Site settings → Environment variables** and add:
+In Netlify, go to **Site configuration → Environment variables** and add:
 
 | Key | Value |
 |-----|-------|
+| `TMDB_API_KEY` | Your TMDB API key (**required by Netlify functions**) |
 | `VITE_TMDB_API_KEY` | Your TMDB API key |
 | `VITE_TMDB_BASE_URL` | `https://api.themoviedb.org/3` |
 | `VITE_TMDB_IMAGE_BASE` | `https://image.tmdb.org/t/p` |
@@ -86,6 +87,8 @@ In Netlify, go to **Site settings → Environment variables** and add:
 | `VITE_SUPABASE_ANON_KEY` | Your Supabase anon/public key |
 | `SUPABASE_URL` | Same as `VITE_SUPABASE_URL` (used by serverless functions) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase service role key (**Settings → API → service_role**) |
+
+> **Note:** `TMDB_API_KEY` (without the `VITE_` prefix) is used by the `netlify/functions/tmdb.mjs` serverless function. If this variable is missing, all TMDB API calls will fail with a `401` error even though the app works locally. Always redeploy after adding environment variables.
 
 ### Build Settings
 
